@@ -1,0 +1,278 @@
+unit Controle;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, klassen, Vcl.Buttons, Vcl.ExtCtrls;
+
+type
+  TForm1 = class(TForm)
+    ZuidNoordCombo: TComboBox;
+    Label1: TLabel;
+    Label2: TLabel;
+    OostWestCombo: TComboBox;
+    OostWestAutoGenerator: TTimer;
+    ZuidNoordAutoGenerator: TTimer;
+    Label3: TLabel;
+    NoordZuidCombo: TComboBox;
+    NoordZuidAutoGenerator: TTimer;
+    StartButton: TBitBtn;
+    WisButton: TBitBtn;
+    Pauzebutton: TBitBtn;
+    Panel1: TPanel;
+    Label4: TLabel;
+    NoordZuidAutoSnelheidCombo: TComboBox;
+    NoordZuidAutoKleurListBox: TColorListBox;
+    NoordZuidAutoVertrekButton: TBitBtn;
+    Label5: TLabel;
+    OostWestAutoSnelheidCombo: TComboBox;
+    OostWestAutoKleurListBox: TColorListBox;
+    OostWestAutoVertrekButton: TBitBtn;
+    Label6: TLabel;
+    ZuidNoordAutoSnelheidCombo: TComboBox;
+    ZuidNoordAutoKleurListBox: TColorListBox;
+    ZuidNoordAutoVertrekButton: TBitBtn;
+    TijdstipPanel: TPanel;
+    TppCombo: TComboBox;
+    procedure FormCreate(Sender: TObject);
+    procedure NoordZuidAutoVertrekButtonClick(Sender: TObject);
+    procedure TppComboChange(Sender: TObject);
+    procedure StartButtonClick(Sender: TObject);
+    procedure PauzebuttonClick(Sender: TObject);
+    procedure WisButtonClick(Sender: TObject);
+    procedure OostWestAutoVertrekButtonClick(Sender: TObject);
+    procedure ZuidNoordAutoVertrekButtonClick(Sender: TObject);
+    procedure NoordZuidAutoGeneratorTimer(Sender: TObject);
+    procedure ZuidNoordAutoGeneratorTimer(Sender: TObject);
+    procedure OostWestAutoGeneratorTimer(Sender: TObject);
+  private
+    { Private declarations }
+    Kruispunt: TKruispunt ;
+    RouteNoordZuid,
+    RouteOostWest,
+    RouteZuidNoord: TRoute ;
+    Tijdstip: integer ;
+    procedure AfterTel ( ATijdstip: integer ) ;
+  public
+    { Public declarations }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.dfm}
+
+uses System.Math ;
+
+function LabelToTpp ( s: string): integer ;
+begin
+  if s = 'Laag' then  result := 5
+  else if s = 'Gemiddeld' then  result := 3
+  else result := 2 ;
+end;
+
+procedure LabelToRange (s: string; var Laag, Hoog: integer ) ;
+begin    {Tellen tussen twee auto's}
+  if s = 'Laag' then
+    begin
+      Laag := 10 ;
+      Hoog := 15 ;
+    end
+  else if s = 'Gemiddeld' then
+    begin
+      Laag := 4 ;
+      Hoog := 12 ;
+    end
+  else
+    begin
+      Laag := 2 ;
+      Hoog := 10 ;
+    end
+end;
+
+procedure TForm1.AfterTel(ATijdstip: integer);
+begin
+  Tijdstip := ATijdstip  ;
+  TijdstipPanel.Caption := inttostr(Tijdstip)
+end;
+
+procedure TForm1.ZuidNoordAutoGeneratorTimer(Sender: TObject);
+var
+  Laag, Hoog, tpp: integer ;
+  Auto: TAuto ;
+  Reisweg: TReisweg ;
+begin
+  tpp := RandomRange(2,5);
+  Auto := TAuto.Create(clWhite, tpp) ;
+  Reisweg := TReisweg.Create(RouteZuidNoord) ;
+  if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
+    Reisweg.Boek(Auto) ;
+  LabelToRange (ZuidNoordCombo.items[ZuidNoordCombo.ItemIndex], Laag, Hoog ) ;
+  ZuidNoordAutoGenerator.Interval :=  RandomRange ( Laag, Hoog )  * Kruispunt.MillisecondenPerTel
+end;
+
+procedure TForm1.ZuidNoordAutoVertrekButtonClick(Sender: TObject);
+var
+  tpp: integer ;
+  kleur: TColor ;
+  Auto: TAuto ;
+  Reisweg: TReisweg ;
+begin
+  tpp := LabelToTpp (ZuidNoordAutoSnelheidCombo.Items[ZuidNoordAutoSnelheidCombo.ItemIndex]) ;
+  Kleur := ZuidNoordAutoKleurListBox.Selected ;
+  Auto := TAuto.Create(Kleur, tpp) ;
+  Reisweg := TReisweg.Create(RouteZuidNoord) ;
+  if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
+    Reisweg.Boek(Auto)
+  else
+    MessageDlg ('Reisweg Noord-Zuid kan niet uitgevoerd worden', mtError, mbOkCancel, 0 )
+end;
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  Canvas.Brush.Color := clBlack ;
+  Kruispunt := TKruispunt.Create(Panel1) ;
+  Kruispunt.OnAfterTel := Aftertel ;
+  RouteNoordZuid  := TRoute.Create ;
+  RouteOostWest  := TRoute.Create ;
+  RouteZuidNoord := TRoute.Create ;
+  RouteNoordZuid.Add(Kruispunt.NoordMatrix[1,1]);
+  RouteNoordZuid.Add(Kruispunt.NoordMatrix[2,1]);
+  RouteNoordZuid.Add(Kruispunt.NoordMatrix[3,1]);
+  RouteNoordZuid.Add(Kruispunt.NoordMatrix[4,1]);
+  RouteNoordZuid.Add(Kruispunt.NoordMatrix[5,1]);
+  RouteNoordZuid.Add(Kruispunt.CentrumMatrix[1,1]);
+  RouteNoordZuid.Add(Kruispunt.ZuidMatrix[1,1]);
+  RouteNoordZuid.Add(Kruispunt.ZuidMatrix[2,1]);
+  RouteNoordZuid.Add(Kruispunt.ZuidMatrix[3,1]);
+  RouteNoordZuid.Add(Kruispunt.ZuidMatrix[4,1]);
+  RouteNoordZuid.Add(Kruispunt.ZuidMatrix[5,1]);
+  RouteZuidNoord.Add(Kruispunt.ZuidMatrix[5,2]);
+  RouteZuidNoord.Add(Kruispunt.ZuidMatrix[4,2]);
+  RouteZuidNoord.Add(Kruispunt.ZuidMatrix[3,2]);
+  RouteZuidNoord.Add(Kruispunt.ZuidMatrix[2,2]);
+  RouteZuidNoord.Add(Kruispunt.ZuidMatrix[1,2]);
+  RouteZuidNoord.Add(Kruispunt.CentrumMatrix[1,2]);
+  RouteZuidNoord.Add(Kruispunt.NoordMatrix[5,2]);
+  RouteZuidNoord.Add(Kruispunt.NoordMatrix[4,2]);
+  RouteZuidNoord.Add(Kruispunt.NoordMatrix[3,2]);
+  RouteZuidNoord.Add(Kruispunt.NoordMatrix[2,2]);
+  RouteZuidNoord.Add(Kruispunt.NoordMatrix[1,2]);
+  RouteOostWest.Add(Kruispunt.OostMatrix[1,5]);
+  RouteOostWest.Add(Kruispunt.OostMatrix[1,4]);
+  RouteOostWest.Add(Kruispunt.OostMatrix[1,3]);
+  RouteOostWest.Add(Kruispunt.OostMatrix[1,2]);
+  RouteOostWest.Add(Kruispunt.OostMatrix[1,1]);
+  RouteOostWest.Add(Kruispunt.CentrumMatrix[1,2]) ;
+  RouteOostWest.Add(Kruispunt.CentrumMatrix[1,1]) ;
+  RouteOostWest.Add(Kruispunt.WestMatrix[1,5]);
+  RouteOostWest.Add(Kruispunt.WestMatrix[1,4]);
+  RouteOostWest.Add(Kruispunt.WestMatrix[1,3]);
+  RouteOostWest.Add(Kruispunt.WestMatrix[1,2]);
+  RouteOostWest.Add(Kruispunt.WestMatrix[1,1]);
+  Tijdstip := 0 ;
+ end;
+
+procedure TForm1.NoordZuidAutoGeneratorTimer(Sender: TObject);
+var
+  Laag, Hoog, tpp: integer ;
+  Auto: TAuto ;
+  Reisweg: TReisweg ;
+begin
+  tpp := RandomRange(2,5);
+  Auto := TAuto.Create(clWhite, tpp) ;
+  Reisweg := TReisweg.Create(RouteNoordZuid) ;
+  if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
+    Reisweg.Boek(Auto) ;
+  LabelToRange (NoordZuidCombo.items[NoordZuidCombo.ItemIndex], Laag, Hoog ) ;
+  NoordZuidAutoGenerator.Interval :=  RandomRange ( Laag, Hoog )  * Kruispunt.MillisecondenPerTel
+end;
+
+procedure TForm1.NoordZuidAutoVertrekButtonClick(Sender: TObject);
+var
+  tpp: integer ;
+  kleur: TColor ;
+  Auto: TAuto ;
+  Reisweg: TReisweg ;
+begin
+  tpp := LabelToTpp (NoordZuidAutoSnelheidCombo.Items[NoordZuidAutoSnelheidCombo.ItemIndex]) ;
+  Kleur := NoordZuidAutoKleurListBox.Selected ;
+  Auto := TAuto.Create(Kleur, tpp) ;
+  Reisweg := TReisweg.Create(RouteNoordZuid) ;
+  if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
+    Reisweg.Boek(Auto)
+  else
+    MessageDlg ('Reisweg Noord-Zuid kan niet uitgevoerd worden', mtError, mbOkCancel, 0 )
+end;
+
+
+procedure TForm1.OostWestAutoGeneratorTimer(Sender: TObject);
+var
+  Laag, Hoog, tpp: integer ;
+  Auto: TAuto ;
+  Reisweg: TReisweg ;
+begin
+  tpp := RandomRange(2,5);
+  Auto := TAuto.Create(clLime, tpp) ;
+  Reisweg := TReisweg.Create(RouteOostWest) ;
+  if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
+    Reisweg.Boek(Auto) ;
+  LabelToRange (OostWestCombo.items[OostWestCombo.ItemIndex], Laag, Hoog ) ;
+  OostWestAutoGenerator.Interval :=  RandomRange ( Laag, Hoog )  * Kruispunt.MillisecondenPerTel
+end;
+
+procedure TForm1.OostWestAutoVertrekButtonClick(Sender: TObject);
+var
+  tpp: integer ;
+  kleur: TColor ;
+  Auto: TAuto ;
+  Reisweg: TReisweg ;
+begin
+  tpp := LabelToTpp (OostWestAutoSnelheidCombo.Items[OostWestAutoSnelheidCombo.ItemIndex]) ;
+  Kleur := OostWestAutoKleurListBox.Selected ;
+  Auto := TAuto.Create(Kleur, tpp) ;
+  Reisweg := TReisweg.Create(RouteOostWest) ;
+  if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
+    Reisweg.Boek(Auto)
+  else
+    MessageDlg ('Reisweg Oost-West kan niet uitgevoerd worden', mtError, mbOkCancel, 0 )
+
+end;
+
+procedure TForm1.PauzebuttonClick(Sender: TObject);
+begin
+  Kruispunt.pause
+end;
+
+procedure TForm1.StartButtonClick(Sender: TObject);
+begin
+  Kruispunt.Start ;
+  OostWestAutoGenerator.Enabled := true ;
+  NoordZuidAutoGenerator.Enabled := true ;
+  ZuidNoordAutoGenerator.Enabled := true ;
+
+end;
+
+procedure TForm1.TppComboChange(Sender: TObject);
+var
+  tpplabel: string ;
+begin
+  tpplabel :=  TppCombo.items[TppCombo.ItemIndex] ;
+  if tpplabel = 'Traag' then
+    Kruispunt.MillisecondenPerTel := 1000
+  else if tpplabel = 'Gemiddeld' then
+    Kruispunt.MillisecondenPerTel := 500
+  else
+    Kruispunt.MillisecondenPerTel := 100
+end;
+
+procedure TForm1.WisButtonClick(Sender: TObject);
+begin
+  Kruispunt.pause ;
+  Kruispunt.Clear
+end;
+
+end.

@@ -47,9 +47,9 @@ type
   private
     { Private declarations }
     Kruispunt: TKruispunt ;
-    RouteNoordZuid,
-    RouteOostWest,
-    RouteZuidNoord: TRoute ;
+    RouteNoordZuid: array [1..AantalNoordZuidBaanvakken] of TRoute ;
+    RouteZuidNoord: array [1..AantalZuidNoordBaanvakken] of TRoute ;
+    RouteOostWest: array [1..AantalZuidNoordBaanvakken] of TRoute ;
     Tijdstip: integer ;
     procedure AfterTel ( ATijdstip: integer ) ;
   public
@@ -102,14 +102,16 @@ var
   Laag, Hoog, tpp: integer ;
   Auto: TAuto ;
   Reisweg: TReisweg ;
+  baanvak: integer ;
 begin
   tpp := RandomRange(2,5);
   Auto := TAuto.Create(clWhite, tpp) ;
-  Reisweg := TReisweg.Create(RouteZuidNoord) ;
+  baanvak := RandomRange (1,AantalZuidNoordbaanvakken + 1) ;
+  Reisweg := TReisweg.Create(RouteZuidNoord[baanvak]) ;
   if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
     Reisweg.Boek(Auto) ;
   LabelToRange (ZuidNoordCombo.items[ZuidNoordCombo.ItemIndex], Laag, Hoog ) ;
-  ZuidNoordAutoGenerator.Interval :=  RandomRange ( Laag, Hoog )  * Kruispunt.MillisecondenPerTel
+  ZuidNoordAutoGenerator.Interval :=  RandomRange ( Laag, Hoog )  * Kruispunt.MillisecondenPerTel  DIV AantalZuidNoordBaanvakken
 end;
 
 procedure TForm1.ZuidNoordAutoVertrekButtonClick(Sender: TObject);
@@ -118,11 +120,13 @@ var
   kleur: TColor ;
   Auto: TAuto ;
   Reisweg: TReisweg ;
+  baanvak: integer ;
 begin
   tpp := LabelToTpp (ZuidNoordAutoSnelheidCombo.Items[ZuidNoordAutoSnelheidCombo.ItemIndex]) ;
   Kleur := ZuidNoordAutoKleurListBox.Selected ;
   Auto := TAuto.Create(Kleur, tpp) ;
-  Reisweg := TReisweg.Create(RouteZuidNoord) ;
+  baanvak := RandomRange (1,AantalZuidNoordbaanvakken + 1) ;
+  Reisweg := TReisweg.Create(RouteZuidNoord[baanvak]) ;
   if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
     Reisweg.Boek(Auto)
   else
@@ -130,47 +134,59 @@ begin
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);
+var
+  baanvak : integer ;
+  Kruisvak: integer ;
 begin
   Canvas.Brush.Color := clBlack ;
   Kruispunt := TKruispunt.Create(Panel1) ;
   Kruispunt.OnAfterTel := Aftertel ;
-  RouteNoordZuid  := TRoute.Create ;
-  RouteOostWest  := TRoute.Create ;
-  RouteZuidNoord := TRoute.Create ;
-  RouteNoordZuid.Add(Kruispunt.NoordMatrix[1,1]);
-  RouteNoordZuid.Add(Kruispunt.NoordMatrix[2,1]);
-  RouteNoordZuid.Add(Kruispunt.NoordMatrix[3,1]);
-  RouteNoordZuid.Add(Kruispunt.NoordMatrix[4,1]);
-  RouteNoordZuid.Add(Kruispunt.NoordMatrix[5,1]);
-  RouteNoordZuid.Add(Kruispunt.CentrumMatrix[1,1]);
-  RouteNoordZuid.Add(Kruispunt.ZuidMatrix[1,1]);
-  RouteNoordZuid.Add(Kruispunt.ZuidMatrix[2,1]);
-  RouteNoordZuid.Add(Kruispunt.ZuidMatrix[3,1]);
-  RouteNoordZuid.Add(Kruispunt.ZuidMatrix[4,1]);
-  RouteNoordZuid.Add(Kruispunt.ZuidMatrix[5,1]);
-  RouteZuidNoord.Add(Kruispunt.ZuidMatrix[5,2]);
-  RouteZuidNoord.Add(Kruispunt.ZuidMatrix[4,2]);
-  RouteZuidNoord.Add(Kruispunt.ZuidMatrix[3,2]);
-  RouteZuidNoord.Add(Kruispunt.ZuidMatrix[2,2]);
-  RouteZuidNoord.Add(Kruispunt.ZuidMatrix[1,2]);
-  RouteZuidNoord.Add(Kruispunt.CentrumMatrix[1,2]);
-  RouteZuidNoord.Add(Kruispunt.NoordMatrix[5,2]);
-  RouteZuidNoord.Add(Kruispunt.NoordMatrix[4,2]);
-  RouteZuidNoord.Add(Kruispunt.NoordMatrix[3,2]);
-  RouteZuidNoord.Add(Kruispunt.NoordMatrix[2,2]);
-  RouteZuidNoord.Add(Kruispunt.NoordMatrix[1,2]);
-  RouteOostWest.Add(Kruispunt.OostMatrix[1,5]);
-  RouteOostWest.Add(Kruispunt.OostMatrix[1,4]);
-  RouteOostWest.Add(Kruispunt.OostMatrix[1,3]);
-  RouteOostWest.Add(Kruispunt.OostMatrix[1,2]);
-  RouteOostWest.Add(Kruispunt.OostMatrix[1,1]);
-  RouteOostWest.Add(Kruispunt.CentrumMatrix[1,2]) ;
-  RouteOostWest.Add(Kruispunt.CentrumMatrix[1,1]) ;
-  RouteOostWest.Add(Kruispunt.WestMatrix[1,5]);
-  RouteOostWest.Add(Kruispunt.WestMatrix[1,4]);
-  RouteOostWest.Add(Kruispunt.WestMatrix[1,3]);
-  RouteOostWest.Add(Kruispunt.WestMatrix[1,2]);
-  RouteOostWest.Add(Kruispunt.WestMatrix[1,1]);
+  for baanvak := 1 to AantalNoordZuidbaanvakken do
+    begin
+      RouteNoordZuid[baanvak] := TRoute.Create ;
+      RouteNoordZuid[baanvak].Add(Kruispunt.NoordMatrix[1,baanvak]);
+      RouteNoordZuid[baanvak].Add(Kruispunt.NoordMatrix[2,baanvak]);
+      RouteNoordZuid[baanvak].Add(Kruispunt.NoordMatrix[3,baanvak]);
+      RouteNoordZuid[baanvak].Add(Kruispunt.NoordMatrix[4,baanvak]);
+      RouteNoordZuid[baanvak].Add(Kruispunt.NoordMatrix[5,baanvak]);
+      RouteNoordZuid[baanvak].Add(Kruispunt.CentrumMatrix[1,baanvak]);     { Moet for-lus worden}
+      RouteNoordZuid[baanvak].Add(Kruispunt.ZuidMatrix[1,baanvak]);
+      RouteNoordZuid[baanvak].Add(Kruispunt.ZuidMatrix[2,baanvak]);
+      RouteNoordZuid[baanvak].Add(Kruispunt.ZuidMatrix[3,baanvak]);
+      RouteNoordZuid[baanvak].Add(Kruispunt.ZuidMatrix[4,baanvak]);
+      RouteNoordZuid[baanvak].Add(Kruispunt.ZuidMatrix[5,baanvak])
+    end ;
+  for baanvak := 1 to AantalZuidNoordbaanvakken do
+    begin
+      RouteZuidNoord[baanvak] := TRoute.Create ;
+      RouteZuidNoord[baanvak].Add(Kruispunt.ZuidMatrix[5,baanvak+AantalNoordZuidbaanvakken]);
+      RouteZuidNoord[baanvak].Add(Kruispunt.ZuidMatrix[4,baanvak+AantalNoordZuidbaanvakken]);
+      RouteZuidNoord[baanvak].Add(Kruispunt.ZuidMatrix[3,baanvak+AantalNoordZuidbaanvakken]);
+      RouteZuidNoord[baanvak].Add(Kruispunt.ZuidMatrix[2,baanvak+AantalNoordZuidbaanvakken]);
+      RouteZuidNoord[baanvak].Add(Kruispunt.ZuidMatrix[1,baanvak+AantalNoordZuidbaanvakken]);
+      RouteZuidNoord[baanvak].Add(Kruispunt.CentrumMatrix[1,baanvak+AantalNoordZuidbaanvakken]);    { Moet for-lus worden}
+      RouteZuidNoord[baanvak].Add(Kruispunt.NoordMatrix[5,baanvak+AantalNoordZuidbaanvakken]);
+      RouteZuidNoord[baanvak].Add(Kruispunt.NoordMatrix[4,baanvak+AantalNoordZuidbaanvakken]);
+      RouteZuidNoord[baanvak].Add(Kruispunt.NoordMatrix[3,baanvak+AantalNoordZuidbaanvakken]);
+      RouteZuidNoord[baanvak].Add(Kruispunt.NoordMatrix[2,baanvak+AantalNoordZuidbaanvakken]);
+      RouteZuidNoord[baanvak].Add(Kruispunt.NoordMatrix[1,baanvak+AantalNoordZuidbaanvakken])
+    end ;
+  for baanvak := 1 to AantalOostWestbaanvakken do
+    begin
+      RouteOostWest[baanvak] := TRoute.Create ;
+      RouteOostWest[baanvak].Add(Kruispunt.OostMatrix[baanvak,5]);
+      RouteOostWest[baanvak].Add(Kruispunt.OostMatrix[baanvak,4]);
+      RouteOostWest[baanvak].Add(Kruispunt.OostMatrix[baanvak,3]);
+      RouteOostWest[baanvak].Add(Kruispunt.OostMatrix[baanvak,2]);
+      RouteOostWest[baanvak].Add(Kruispunt.OostMatrix[baanvak,1]);
+      for Kruisvak := AantalNoordZuidbaanvakken + AantalZuidNoordbaanvakken downto 1 do
+         RouteOostWest[baanvak].Add(Kruispunt.CentrumMatrix[baanvak,Kruisvak]) ;
+      RouteOostWest[baanvak].Add(Kruispunt.WestMatrix[baanvak,5]);
+      RouteOostWest[baanvak].Add(Kruispunt.WestMatrix[baanvak,4]);
+      RouteOostWest[baanvak].Add(Kruispunt.WestMatrix[baanvak,3]);
+      RouteOostWest[baanvak].Add(Kruispunt.WestMatrix[baanvak,2]);
+      RouteOostWest[baanvak].Add(Kruispunt.WestMatrix[baanvak,1])
+    end ;
   Tijdstip := 0 ;
  end;
 
@@ -179,14 +195,16 @@ var
   Laag, Hoog, tpp: integer ;
   Auto: TAuto ;
   Reisweg: TReisweg ;
+  baanvak: integer ;
 begin
   tpp := RandomRange(2,5);
   Auto := TAuto.Create(clWhite, tpp) ;
-  Reisweg := TReisweg.Create(RouteNoordZuid) ;
+  baanvak := RandomRange (1,AantalNoordZuidbaanvakken + 1) ;
+  Reisweg := TReisweg.Create(RouteNoordZuid[baanvak]) ;
   if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
     Reisweg.Boek(Auto) ;
   LabelToRange (NoordZuidCombo.items[NoordZuidCombo.ItemIndex], Laag, Hoog ) ;
-  NoordZuidAutoGenerator.Interval :=  RandomRange ( Laag, Hoog )  * Kruispunt.MillisecondenPerTel
+  NoordZuidAutoGenerator.Interval :=  RandomRange ( Laag, Hoog )  * Kruispunt.MillisecondenPerTel  DIV AantalNoordZuidBaanvakken
 end;
 
 procedure TForm1.NoordZuidAutoVertrekButtonClick(Sender: TObject);
@@ -195,11 +213,13 @@ var
   kleur: TColor ;
   Auto: TAuto ;
   Reisweg: TReisweg ;
+  baanvak: integer ;
 begin
   tpp := LabelToTpp (NoordZuidAutoSnelheidCombo.Items[NoordZuidAutoSnelheidCombo.ItemIndex]) ;
   Kleur := NoordZuidAutoKleurListBox.Selected ;
   Auto := TAuto.Create(Kleur, tpp) ;
-  Reisweg := TReisweg.Create(RouteNoordZuid) ;
+  baanvak := RandomRange (1,AantalNoordZuidbaanvakken + 1) ;
+  Reisweg := TReisweg.Create(RouteNoordZuid[baanvak]) ;
   if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
     Reisweg.Boek(Auto)
   else
@@ -212,14 +232,16 @@ var
   Laag, Hoog, tpp: integer ;
   Auto: TAuto ;
   Reisweg: TReisweg ;
+  baanvak: integer ;
 begin
   tpp := RandomRange(2,5);
   Auto := TAuto.Create(clLime, tpp) ;
-  Reisweg := TReisweg.Create(RouteOostWest) ;
+  baanvak := RandomRange (1,AantaloostWestbaanvakken + 1) ;
+  Reisweg := TReisweg.Create(RouteOostWest[baanvak]) ;
   if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
     Reisweg.Boek(Auto) ;
   LabelToRange (OostWestCombo.items[OostWestCombo.ItemIndex], Laag, Hoog ) ;
-  OostWestAutoGenerator.Interval :=  RandomRange ( Laag, Hoog )  * Kruispunt.MillisecondenPerTel
+  OostWestAutoGenerator.Interval :=  RandomRange ( Laag, Hoog )  * Kruispunt.MillisecondenPerTel DIV AantalOostWestBaanvakken
 end;
 
 procedure TForm1.OostWestAutoVertrekButtonClick(Sender: TObject);
@@ -228,11 +250,13 @@ var
   kleur: TColor ;
   Auto: TAuto ;
   Reisweg: TReisweg ;
+  baanvak: integer ;
 begin
   tpp := LabelToTpp (OostWestAutoSnelheidCombo.Items[OostWestAutoSnelheidCombo.ItemIndex]) ;
   Kleur := OostWestAutoKleurListBox.Selected ;
   Auto := TAuto.Create(Kleur, tpp) ;
-  Reisweg := TReisweg.Create(RouteOostWest) ;
+  baanvak := RandomRange (1,AantaloostWestbaanvakken + 1) ;
+  Reisweg := TReisweg.Create(RouteOostWest[baanvak]) ;
   if Reisweg.Bereken(Tijdstip+1, tpp, tpp, 0) then
     Reisweg.Boek(Auto)
   else

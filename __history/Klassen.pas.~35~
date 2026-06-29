@@ -1,0 +1,585 @@
+unit Klassen;
+
+interface
+
+uses
+  System.Types, Vcl.Graphics, System.Generics.Collections, Vcl.ExtCtrls, System.Classes, System.Generics.Defaults, Vcl.Controls ;
+
+const
+  VertAanloopLengte= 5 ;
+  VertAantalBaanvakken = 2 ;
+  HorAanloopLengte= 5 ;
+  HorAantalBaanvakken = 1 ;
+  PlekBreedte = 20 ;
+  Plekhoogte = 20 ;
+type
+TSlotActie = ( saAankomen, saBlijven, saVertrekken );
+TWindrichting = ( Noord, Oost, Zuid, West ) ;
+
+TIntegerEvent = procedure( Tijdstip: integer ) of object;
+
+TAuto = class ; {forward}
+
+
+
+
+(*********************************************************
+ *                                                       *
+ * SLOT                                                  *
+ *                                                       *
+ *********************************************************)
+ TSlot = class
+ public
+   Actie: TSlotActie ;
+   Tijdstip: integer ;
+   Auto: TAuto ;
+   constructor Create (AActie: TSlotActie;  ATijdstip: integer; AAuto: TAuto ) ;
+ end;
+
+ TSortedSlotList = class
+  private
+    FList: TList<TSlot>;
+    FComparer: IComparer<TSlot>;
+    function getItem(Index: integer): TSlot;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure AddSorted(const Item: TSlot);
+    procedure Clear;
+    function Count: integer ;
+    procedure Delete (Index: integer) ;
+    function isBezet (Tijdstip: integer ): boolean ;
+    property Items[Index: integer]:TSlot read getItem; default;
+  end;
+
+
+(*********************************************************
+ *                                                       *
+ * PLEK                                                  *
+ *                                                       *
+ *********************************************************)
+TPlek = class
+public
+  Rechthoek: TRect ;
+  Slots: TSortedSlotList ;
+  constructor Create ( ARechthoek: TRect ) ;
+  destructor Destroy ;  override;
+  procedure Clear ( ACanvas: TCanvas) ; {Wagen uitwissen, Slots leegmaken}
+  procedure Teken ( ACanvas: TCanvas; Tijdstip: integer) ; {Slot tekenen en wagen}
+  function SlotsVrij ( TijdStip, Duur: integer ): boolean ;   {Geeft aan of er genoeg slots vrij zijn op het tijdstip, met tijd ervoor en erna als reserve}
+  procedure Reserveer ( Tijdstip: integer; Duur: integer; Auto: TAuto ) ;
+  procedure DoeUwDing ( ACanvas: TCanvas; Tijdstip: integer ) ;
+end;
+
+(*********************************************************
+ *                                                       *
+ * ETAPPE                                                *
+ *                                                       *
+ *********************************************************)
+ TEtappe = class
+ public
+   Plek: TPlek ;
+   Tijdstip: integer ;
+   Duur: integer ;
+   constructor Create ( APlek: TPlek; ATijdstip, ADuur: integer ) ;
+   destructor Destroy; override ;
+ end;
+
+(*********************************************************
+ *                                                       *
+ * ROUTE                                                 *
+ *                                                       *
+ *********************************************************)
+ TRoute = TList<TPlek> ;
+
+
+(*********************************************************
+ *                                                       *
+ * REISWEG                                               *
+ *                                                       *
+ *********************************************************)
+ TReisweg = class
+  private
+    function GetEtappe(Index: integer): TEtappe;
+    procedure SetEtappe(Index: integer; const Value: TEtappe);
+ public
+   Etappes: TObjectList<TEtappe> ;
+   constructor Create ( Route: TRoute );
+   destructor Destroy ; override;
+   procedure Boek ( Auto: TAuto ) ;
+   function Bereken ( Vertrektijd, MinimuTpp, HuidigeTpp, EtappeNummer: integer ): boolean; { false = onmogelijk}
+   property Etappe[Index: integer]: TEtappe read GetEtappe write SetEtappe; default ;
+ end;
+
+(*********************************************************
+ *                                                       *
+ * AUTO                                                  *
+ *                                                       *
+ *********************************************************)
+ TAuto = class
+ public
+   MinimumTpp: integer ;
+   Kleur: TColor ;
+   Reis: TReisweg ;
+   constructor Create ( AKleur: TColor; AMinimumTpp: integer) ;
+   destructor Destroy ; override;
+   Procedure Paint ( ACanvas: TCanvas; ARect: TRect ) ;
+ end;
+
+(*********************************************************
+ *                                                       *
+ * KRUISPUNT                                             *
+ *                                                       *
+ *********************************************************)
+ TKruispunt = class (TPaintbox)
+ private
+   FAfterTel: TIntegerEvent ;
+
+   procedure KlokTimer (Sender: Tobject) ;
+   function GetMillisecondenPerTel: integer;
+   procedure SetMillisecondenPerTel(const Value: integer);
+   procedure Teken ( Sender: TObject ) ;
+ public
+   NoordMatrix: Array[1..VertAanloopLengte, 1..VertAantalBaanvakken] of TPlek ;      { Rij, Kolom }
+   ZuidMatrix: Array[1..VertAanloopLengte, 1..VertAantalBaanvakken] of TPlek ;
+   OostMatrix: Array[1..HorAantalBaanvakken, 1..HorAanloopLengte] of TPlek ;
+   WestMatrix: Array[1..HorAantalBaanvakken, 1..HorAanloopLengte] of TPlek ;
+   CentrumMatrix: Array[1..HorAantalBaanvakken, 1..VertAantalBaanvakken] of TPlek ;
+   Klok: TTimer ;
+   Tijdstip: integer ;
+   constructor Create (AOwner: TWinControl);
+   destructor Destroy ; override ;
+   procedure Start ;
+   procedure pause ;
+   procedure Clear ;
+
+   property MillisecondenPerTel: integer read GetMillisecondenPerTel write SetMillisecondenPerTel ;
+   property OnAfterTel: TIntegerEvent read FAfterTel write FAfterTel ;
+ end;
+
+
+implementation
+
+{ TPlek }
+
+procedure TPlek.Clear( ACanvas: TCanvas) ;
+begin
+  ACanvas.Rectangle(RechtHoek) ;
+  Slots.Clear
+end;
+
+constructor TPlek.Create(ARechthoek: TRect);
+begin
+  inherited Create ;
+   Rechthoek := ARechthoek ;
+   Slots := TSortedSlotList.Create
+end;
+
+destructor TPlek.Destroy;
+begin
+  Slots.Free ;
+  inherited;
+end;
+
+procedure TPlek.DoeUwDing(ACanvas: TCanvas; Tijdstip: integer);
+begin
+  if Slots.Count > 0 then
+    if Tijdstip >= Slots[0].Tijdstip then
+      begin
+         case Slots[0].Actie of
+           saAankomen: Slots[0].Auto.Paint(ACanvas, Rechthoek) ;
+           saVertrekken: ACanvas.Rectangle(Rechthoek) ; {uitwissen}
+         end; {case}
+         Slots.Delete(0)  {Slot verwerkt, niet meer nodig}
+      end;
+end;
+
+procedure TPlek.Reserveer(Tijdstip, Duur: integer; Auto: TAuto);
+var
+  Slot: TSlot ;
+  i: integer ;
+begin
+  Slot := TSlot.Create ( saAankomen, Tijdstip, Auto ) ;
+  Slots.AddSorted(Slot);
+  for i := 2 to Duur do
+    begin
+      Slot := TSlot.Create( saBlijven, Tijdstip + i - 1, Auto ) ;
+      Slots.AddSorted(Slot)
+    end;
+  Slot := TSlot.Create( saVertrekken, Tijdstip + duur, Auto ) ;
+  Slots.AddSorted(Slot)
+end;
+
+function TPlek.SlotsVrij(TijdStip, Duur: integer): boolean;
+var
+  NogVrij : boolean ;
+  i: integer ;
+begin
+  NogVrij := true ;
+  i := -1 ;    {We gaan kijken of de plek al vrij is op Tijdstip-1 tot en met duur +1 om zeker te zijn dat er een vrije tijd is tussen twee bezettingen}
+  while NogVrij and (i <= Duur) do
+    begin
+      NogVrij := not Slots.isBezet(TijdStip + i ) ;
+      inc(i)
+    end;
+  result := Nogvrij
+end;
+
+procedure TPlek.Teken(ACanvas: TCanvas; Tijdstip: integer);
+begin
+  ACanvas.Rectangle(Rechthoek) ; {uitwissen}
+  if Slots.Count > 0 then
+    if Slots[0].Tijdstip <= Tijdstip then
+      Slots[0].Auto.Paint(ACanvas,Rechthoek)
+end;
+
+{ TReisweg }
+
+function TReisweg.Bereken(Vertrektijd, MinimuTpp, HuidigeTpp, EtappeNummer: integer): boolean;
+var
+  Starttijd: integer ;
+  Gelukt: boolean ;
+begin
+  if EtappeNummer = 0 then
+    Starttijd := Vertrektijd
+  else
+    Starttijd := Etappes[EtappeNummer-1].Tijdstip + Etappes[EtappeNummer-1].Duur ;
+  if EtappeNummer >= Etappes.Count then
+    result := true {We zijn aan het einde van de reisweg geraakt, en hebben alle etappes opgevuld}
+  else
+    begin
+      Gelukt := false ;
+      if HuidigeTpp > MinimuTpp then {We kunnen versnellen}
+        if Etappes[EtappeNummer].Plek.SlotsVrij(Starttijd, HuidigeTpp - 1) then
+          begin
+            Etappes[EtappeNummer].Tijdstip := Starttijd ;
+            Etappes[EtappeNummer].Duur := HuidigeTpp - 1 ;
+            Gelukt := Bereken ( Vertrektijd + HuidigeTpp - 1, MinimuTpp, HuidigeTpp-1, EtappeNummer+1 ) ; {Recursief kijken of de verdere reisweg lukt}
+            if not Gelukt then
+              begin  {Helaas, met de verhoogde snelheid op dit tijdstip is de verdere reisweg onmogelijk}
+                Etappes[EtappeNummer].Tijdstip := 0 ;
+                Etappes[EtappeNummer].Duur := 0
+              end;
+          end ;
+      if not Gelukt then
+        if Etappes[EtappeNummer].Plek.SlotsVrij(Starttijd, HuidigeTpp) then  {Kijken of het aan de huidige snelheid lukt}
+          begin
+            Etappes[EtappeNummer].Tijdstip := Starttijd ;
+            Etappes[EtappeNummer].Duur := HuidigeTpp ;
+            Gelukt := Bereken ( Vertrektijd + HuidigeTpp, MinimuTpp, HuidigeTpp, EtappeNummer+1 ) ;
+            if not Gelukt then
+              begin  {Helaas, met de huidige snelheid op dit tijdstip is de verdere reisweg onmogelijk}
+                Etappes[EtappeNummer].Tijdstip := 0 ;
+                Etappes[EtappeNummer].Duur := 0
+              end;
+          end ;
+      if not Gelukt then
+        if Etappes[EtappeNummer].Plek.SlotsVrij(Starttijd, HuidigeTpp+1) then  {Kijken of het trager lukt}
+          begin
+            Etappes[EtappeNummer].Tijdstip := Starttijd ;
+            Etappes[EtappeNummer].Duur := HuidigeTpp +1 ;
+            Gelukt := Bereken ( Vertrektijd + HuidigeTpp + 1, MinimuTpp, HuidigeTpp+1, EtappeNummer+1 ) ;
+            if not Gelukt then
+              begin  {Helaas is de verdere reisweg onmogelijk}
+                Etappes[EtappeNummer].Tijdstip := 0 ;
+                Etappes[EtappeNummer].Duur := 0
+              end;
+          end ;
+      result := Gelukt
+    end;
+end;
+
+procedure TReisweg.Boek( Auto: TAuto );
+var
+  Etappe: TEtappe ;
+begin
+  for Etappe in  Etappes do
+    Etappe.Plek.Reserveer(Etappe.Tijdstip, Etappe.Duur, Auto)
+end;
+
+constructor TReisweg.Create(Route: TRoute);
+var
+  Plek: TPlek ;
+  Etappe: TEtappe ;
+begin   { Kopieer de route in een reisweg met 0 als tijdstip in elke etappe }
+  inherited Create;
+  Etappes := TObjectList<TEtappe>.Create ;
+  for Plek in Route do
+    begin
+      Etappe := TEtappe.Create (Plek, 0, 0) ;
+      Etappes.Add(Etappe)
+    end;
+end;
+
+destructor TReisweg.Destroy;
+begin
+  Etappes.Free ;  {Objectlist vernietigt ook alle Etappe-objecten}
+  inherited;
+end;
+
+function TReisweg.GetEtappe(Index: integer): TEtappe;
+begin
+  result := Etappes[Index]
+end;
+
+procedure TReisweg.SetEtappe(Index: integer; const Value: TEtappe);
+begin
+  Etappes[Index] := value
+end;
+
+{ TAuto }
+
+constructor TAuto.Create(AKleur: TColor; AMinimumTpp: integer );
+begin
+  inherited Create ;
+  Kleur := AKleur ;
+  MinimumTpp := AMinimumTpp;
+  Reis := nil
+end;
+
+destructor TAuto.Destroy;
+begin
+  Reis.Free ;
+  inherited;
+end;
+
+procedure TAuto.Paint(ACanvas: TCanvas; ARect: TRect);
+var
+  Achtergrond: TColor ;
+begin
+  Achtergrond:= ACanvas.Brush.Color ;
+  ACanvas.Brush.Color := Kleur ;
+  ACanvas.Rectangle(ARect)
+end;
+
+{ TKruispunt }
+
+procedure TKruispunt.Clear;
+var
+  Plek: TPlek ;
+begin
+  for Plek in NoordMatrix do
+    Plek.Clear (Canvas);
+  for Plek in OostMatrix do
+    Plek.Clear (Canvas);
+  for Plek in ZuidMatrix do
+    Plek.Clear (Canvas);
+  for Plek in WestMatrix do
+    Plek.Clear (Canvas);
+  for Plek in CentrumMatrix do
+    Plek.Clear (Canvas);
+  Klok.Enabled := false ;
+  Tijdstip := 0
+end;
+
+constructor TKruispunt.Create(AOwner: TWinControl);
+var
+  Rij, Kolom: integer ;
+  Plek: TPlek ;
+begin
+  inherited Create(AOwner);
+  Parent := AOwner ;
+  for Rij := 1 to VertAanloopLengte do
+    for Kolom := 1 to VertAantalBaanvakken do
+      begin
+        Plek := TPlek.Create(Bounds((HorAanloopLengte+ Kolom - 1)*PlekBreedte, (Rij -1)*PlekHoogte, PlekBreedte, PlekHoogte ) );
+        NoordMatrix[Rij, Kolom] := Plek
+      end;
+  for Rij := 1 to VertAanloopLengte do
+    for Kolom := 1 to VertAantalBaanvakken do
+      begin
+        Plek := TPlek.Create(Bounds((HorAanloopLengte+ Kolom - 1)*PlekBreedte, (Rij -1 + VertAanlooplengte + HorAantalBaanvakken)*PlekHoogte, PlekBreedte, PlekHoogte ));
+        ZuidMatrix[Rij, Kolom] := Plek
+      end;
+  for Rij := 1 to HorAantalBaanvakken do
+    for Kolom := 1 to HorAanloopLengte do
+      begin
+        Plek := TPlek.Create(Bounds((Kolom - 1)*PlekBreedte, (VertAanlooplengte + Rij -1)*PlekHoogte, PlekBreedte, PlekHoogte ));
+        WestMatrix[Rij, Kolom] := Plek
+      end;
+  for Rij := 1 to HorAantalBaanvakken do
+    for Kolom := 1 to HorAanloopLengte do
+      begin
+        Plek := TPlek.Create(Bounds((HorAanloopLengte + VertAantalBaanvakken + Kolom - 1)*PlekBreedte, (VertAanlooplengte + Rij -1)*PlekHoogte, PlekBreedte, PlekHoogte ));
+        OostMatrix[Rij, Kolom] := Plek
+      end;
+  for Rij := 1 to HorAantalBaanvakken do
+    for Kolom := 1 to VertAantalBaanvakken do
+      begin
+        Plek := TPlek.Create(Bounds((HorAanloopLengte + Kolom - 1)*PlekBreedte, (VertAanlooplengte + Rij -1)*PlekHoogte, PlekBreedte, PlekHoogte ) );
+        CentrumMatrix[Rij, Kolom] := Plek
+      end;
+  Klok:= TTimer.Create(Aowner);
+  Klok.Enabled := false ;
+  Klok.OnTimer := KlokTimer ;
+  Tijdstip := 0 ;
+  OnPaint := Teken ;
+  Width := (2 * HorAanloopLengte + VertAantalBaanvakken) * plekbreedte ;
+  Height := (2 * VertAanloopLengte + HorAantalBaanvakken) * plekhoogte ;
+  Clear;
+end;
+
+destructor TKruispunt.Destroy;
+var
+  Plek: TPlek ;
+begin
+  for Plek in NoordMatrix do
+    Plek.Free ;
+  for Plek in OostMatrix do
+    Plek.Free ;
+  for Plek in ZuidMatrix do
+    Plek.Free ;
+  for Plek in WestMatrix do
+    Plek.Free ;
+  for Plek in CentrumMatrix do
+    Plek.Free ;
+  Klok.Free ;
+  inherited;
+end;
+
+function TKruispunt.GetMillisecondenPerTel: integer;
+begin
+  result := Klok.Interval
+end;
+
+procedure TKruispunt.KlokTimer (Sender: Tobject);
+var
+  Plek: TPlek ;
+begin
+  for Plek in NoordMatrix do
+    Plek.DoeUwDing(Canvas, Tijdstip) ;
+  for Plek in OostMatrix do
+    Plek.DoeUwDing(Canvas, Tijdstip) ;
+  for Plek in ZuidMatrix do
+    Plek.DoeUwDing(Canvas, Tijdstip) ;
+  for Plek in WestMatrix do
+    Plek.DoeUwDing(Canvas, Tijdstip) ;
+  for Plek in CentrumMatrix do
+    Plek.DoeUwDing(Canvas, Tijdstip) ;
+  inc(Tijdstip)
+end;
+
+procedure TKruispunt.pause;
+begin
+  Klok.Enabled := false
+end;
+
+procedure TKruispunt.SetMillisecondenPerTel(const Value: integer);
+begin
+  Klok.Interval := value
+end;
+
+procedure TKruispunt.Start;
+begin
+  Klok.Enabled := true
+end;
+
+procedure TKruispunt.Teken(Sender: TObject);
+var
+  Plek: TPlek ;
+begin
+  Canvas.Brush.Color := clGray ;
+  for Plek in NoordMatrix do
+    Plek.Teken (Canvas, Tijdstip);
+  for Plek in OostMatrix do
+    Plek.Teken (Canvas, Tijdstip);
+  for Plek in ZuidMatrix do
+    Plek.Teken (Canvas, Tijdstip);
+  for Plek in WestMatrix do
+    Plek.Teken (Canvas, Tijdstip);
+  for Plek in CentrumMatrix do
+    Plek.Teken (Canvas, Tijdstip);
+end;
+
+{ TSlot }
+
+constructor TSlot.Create(AActie: TSlotActie; ATijdstip: integer; AAuto: TAuto);
+begin
+  inherited Create ;
+  Actie := AActie ;
+  Tijdstip := ATijdstip ;
+  Auto := AAuto
+end;
+
+{ TSortedSlotList }
+
+procedure TSortedSlotList.AddSorted(const Item: TSlot);
+var
+  Index: Integer;
+begin
+  // BinarySearch zoekt waar het item hoort of al staat
+  FList.BinarySearch(Item, Index, FComparer) ;
+  FList.Insert(Index, Item)
+end;
+
+procedure TSortedSlotList.Clear;
+begin
+  FList.Clear
+end;
+
+function TSortedSlotList.Count: integer;
+begin
+  result := Flist.Count
+end;
+
+constructor TSortedSlotList.Create;
+begin
+  FList := TList<TSlot>.Create;
+  // Definieer hier de vaste sorteerregel (bijv. op leeftijd)
+  FComparer := TComparer<TSlot>.Construct(
+    function(const Left, Right: TSlot): Integer
+    begin
+      Result := Left.Tijdstip - Right.Tijdstip;
+    end
+  );
+
+end;
+
+procedure TSortedSlotList.Delete(Index: integer);
+begin
+  Flist.Delete(Index)
+end;
+
+destructor TSortedSlotList.Destroy;
+begin
+  FList.Free;
+  inherited;
+end;
+
+function TSortedSlotList.getItem(Index: integer): TSlot;
+begin
+  Result := FList[Index]
+end;
+
+function TSortedSlotList.isBezet(Tijdstip: integer): boolean;
+var
+  Index: Integer;
+  Slot: TSlot ;
+  Bestaat: boolean ;
+begin
+  Slot := TSlot.Create(saBlijven, Tijdstip, nil)  ; {Dummy slot om te vergelijken}
+  Bestaat := FList.BinarySearch ( Slot, Index ) ;
+  if Bestaat then
+    result := (Flist[Index].Actie <> saVertrekken) {Een vertrekken-slot is eigenljk vrij}
+  else
+    result := false
+end;
+
+{ TEtappe }
+
+constructor TEtappe.Create(APlek: TPlek; ATijdstip, ADuur: integer);
+begin
+  inherited Create ;
+  Plek := APlek ;
+  Tijdstip := ATijdstip ;
+  Duur := ADuur
+end;
+
+destructor TEtappe.Destroy;
+begin
+  {Geen owner van Plek}
+  inherited;
+end;
+
+end.
+

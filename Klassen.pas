@@ -7,9 +7,11 @@ uses
 
 const
   VertAanloopLengte= 5 ;
-  VertAantalBaanvakken = 2 ;
+  AantalNoordZuidBaanvakken = 2 ;
+  AantalZuidNoordBaanvakken = 2 ;
   HorAanloopLengte= 5 ;
-  HorAantalBaanvakken = 1 ;
+  AantalOostWestBaanvakken = 1 ;
+  AantalWestOostBaanvakken = 1 ;
   PlekBreedte = 20 ;
   Plekhoogte = 20 ;
 type
@@ -140,11 +142,11 @@ end;
    procedure SetMillisecondenPerTel(const Value: integer);
    procedure Teken ( Sender: TObject ) ;
  public
-   NoordMatrix: Array[1..VertAanloopLengte, 1..VertAantalBaanvakken] of TPlek ;      { Rij, Kolom }
-   ZuidMatrix: Array[1..VertAanloopLengte, 1..VertAantalBaanvakken] of TPlek ;
-   OostMatrix: Array[1..HorAantalBaanvakken, 1..HorAanloopLengte] of TPlek ;
-   WestMatrix: Array[1..HorAantalBaanvakken, 1..HorAanloopLengte] of TPlek ;
-   CentrumMatrix: Array[1..HorAantalBaanvakken, 1..VertAantalBaanvakken] of TPlek ;
+   NoordMatrix: Array[1..VertAanloopLengte, 1..AantalNoordZuidBaanvakken+AantalZuidNoordBaanvakken] of TPlek ;      { Rij, Kolom }
+   ZuidMatrix: Array[1..VertAanloopLengte, 1..AantalNoordZuidBaanvakken+AantalZuidNoordBaanvakken] of TPlek ;
+   OostMatrix: Array[1..AantalOostWestBaanvakken+AantalWestOostBaanvakken, 1..HorAanloopLengte] of TPlek ;
+   WestMatrix: Array[1..AantalOostWestBaanvakken+AantalWestOostBaanvakken, 1..HorAanloopLengte] of TPlek ;
+   CentrumMatrix: Array[1..AantalOostWestBaanvakken+AantalWestOostBaanvakken, 1..AantalNoordZuidBaanvakken+AantalZuidNoordBaanvakken] of TPlek ;
    Klok: TTimer ;
    Tijdstip: integer ;
    constructor Create (AOwner: TWinControl);
@@ -362,31 +364,31 @@ begin
   inherited Create(AOwner);
   Parent := AOwner ;
   for Rij := 1 to VertAanloopLengte do
-    for Kolom := 1 to VertAantalBaanvakken do
+    for Kolom := 1 to AantalNoordZuidBaanvakken+AantalZuidNoordBaanvakken do
       begin
         Plek := TPlek.Create(Bounds((HorAanloopLengte+ Kolom - 1)*PlekBreedte, (Rij -1)*PlekHoogte, PlekBreedte, PlekHoogte ) );
         NoordMatrix[Rij, Kolom] := Plek
       end;
   for Rij := 1 to VertAanloopLengte do
-    for Kolom := 1 to VertAantalBaanvakken do
+    for Kolom := 1 to AantalNoordZuidBaanvakken+AantalZuidNoordBaanvakken do
       begin
-        Plek := TPlek.Create(Bounds((HorAanloopLengte+ Kolom - 1)*PlekBreedte, (Rij -1 + VertAanlooplengte + HorAantalBaanvakken)*PlekHoogte, PlekBreedte, PlekHoogte ));
+        Plek := TPlek.Create(Bounds((HorAanloopLengte+ Kolom - 1)*PlekBreedte, (Rij -1 + VertAanlooplengte + AantalOostWestBaanvakken+AantalWestOostBaanvakken)*PlekHoogte, PlekBreedte, PlekHoogte ));
         ZuidMatrix[Rij, Kolom] := Plek
       end;
-  for Rij := 1 to HorAantalBaanvakken do
+  for Rij := 1 to AantalOostWestBaanvakken+AantalWestOostBaanvakken do
     for Kolom := 1 to HorAanloopLengte do
       begin
         Plek := TPlek.Create(Bounds((Kolom - 1)*PlekBreedte, (VertAanlooplengte + Rij -1)*PlekHoogte, PlekBreedte, PlekHoogte ));
         WestMatrix[Rij, Kolom] := Plek
       end;
-  for Rij := 1 to HorAantalBaanvakken do
+  for Rij := 1 to AantalOostWestBaanvakken+AantalWestOostBaanvakken do
     for Kolom := 1 to HorAanloopLengte do
       begin
-        Plek := TPlek.Create(Bounds((HorAanloopLengte + VertAantalBaanvakken + Kolom - 1)*PlekBreedte, (VertAanlooplengte + Rij -1)*PlekHoogte, PlekBreedte, PlekHoogte ));
+        Plek := TPlek.Create(Bounds((HorAanloopLengte + AantalNoordZuidBaanvakken+AantalZuidNoordBaanvakken + Kolom - 1)*PlekBreedte, (VertAanlooplengte + Rij -1)*PlekHoogte, PlekBreedte, PlekHoogte ));
         OostMatrix[Rij, Kolom] := Plek
       end;
-  for Rij := 1 to HorAantalBaanvakken do
-    for Kolom := 1 to VertAantalBaanvakken do
+  for Rij := 1 to AantalOostWestBaanvakken+AantalWestOostBaanvakken do
+    for Kolom := 1 to AantalNoordZuidBaanvakken+AantalZuidNoordBaanvakken do
       begin
         Plek := TPlek.Create(Bounds((HorAanloopLengte + Kolom - 1)*PlekBreedte, (VertAanlooplengte + Rij -1)*PlekHoogte, PlekBreedte, PlekHoogte ) );
         CentrumMatrix[Rij, Kolom] := Plek
@@ -396,8 +398,8 @@ begin
   Klok.OnTimer := KlokTimer ;
   Tijdstip := 0 ;
   OnPaint := Teken ;
-  Width := (2 * HorAanloopLengte + VertAantalBaanvakken) * plekbreedte ;
-  Height := (2 * VertAanloopLengte + HorAantalBaanvakken) * plekhoogte ;
+  Width := (2 * HorAanloopLengte + AantalNoordZuidBaanvakken+AantalZuidNoordBaanvakken) * plekbreedte ;
+  Height := (2 * VertAanloopLengte + AantalOostWestBaanvakken+AantalWestOostBaanvakken) * plekhoogte ;
 end;
 
 destructor TKruispunt.Destroy;
