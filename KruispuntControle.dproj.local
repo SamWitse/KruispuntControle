@@ -2,11 +2,11 @@
 <BorlandProject>
 	<Transactions>
     <Transaction>2022/01/21 11:12:36.000.395,=C:\Robby Programs\Delphi\Unit1.pas</Transaction>
-    <Transaction>2026/06/22 18:17:57.027,=C:\Robby Programs\Delphi\Unit1.pas</Transaction>
-    <Transaction>2026/06/22 18:19:08.172,C:\Robby Programs\Delphi\KruispuntControle\Controle.pas=C:\Robby Programs\Delphi\Unit1.pas</Transaction>
-    <Transaction>2026/06/22 18:19:08.172,C:\Robby Programs\Delphi\KruispuntControle\Controle.dfm=C:\Robby Programs\Delphi\Unit1.dfm</Transaction>
-    <Transaction>2026/06/22 18:19:27.246,C:\Robby Programs\Delphi\KruispuntControle\KruispuntControle.dproj=C:\Robby Programs\Delphi\Project1.dproj</Transaction>
-    <Transaction>2026/06/22 18:37:36.492,=C:\Robby Programs\Delphi\KruispuntControle\Unit1.pas</Transaction>
-    <Transaction>2026/06/22 18:38:54.403,C:\Robby Programs\Delphi\KruispuntControle\Klassen.pas=C:\Robby Programs\Delphi\KruispuntControle\Unit1.pas</Transaction>
+    <Transaction>2026/06/22 18:17:57.000.027,=C:\Robby Programs\Delphi\Unit1.pas</Transaction>
+    <Transaction>2026/06/22 18:19:08.000.172,C:\Robby Programs\Delphi\Unit1.pas=C:\Robby Programs\Delphi\KruispuntControle\Controle.pas</Transaction>
+    <Transaction>2026/06/22 18:19:08.000.172,C:\Robby Programs\Delphi\Unit1.dfm=C:\Robby Programs\Delphi\KruispuntControle\Controle.dfm</Transaction>
+    <Transaction>2026/06/22 18:19:27.000.246,C:\Robby Programs\Delphi\Project1.dproj=C:\Robby Programs\Delphi\KruispuntControle\KruispuntControle.dproj</Transaction>
+    <Transaction>2026/06/22 18:37:36.000.492,=C:\Robby Programs\Delphi\KruispuntControle\Unit1.pas</Transaction>
+    <Transaction>2026/06/22 18:38:54.000.403,C:\Robby Programs\Delphi\KruispuntControle\Unit1.pas=C:\Robby Programs\Delphi\KruispuntControle\Klassen.pas</Transaction>
   </Transactions>
 </BorlandProject>
